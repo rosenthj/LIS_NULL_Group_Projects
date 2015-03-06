@@ -14,14 +14,27 @@ public class Main {
 	static final int ITERATIONS_PER_TRAINING_ERROR_OUTPUT = 2500;
 	static final int DIMENSION_TIME_OF_DAY = 4;
 	static final int DIMENSIONS = 1;
+	static enum CLASSIFIER_NAME {
+		BOUNDARYFORCED, KNN
+	};
+	CLASSIFIER_NAME cln = CLASSIFIER_NAME.KNN;
 	
 	int[] monthsTable = {0,3,3,6,1,4,6,2,5,0,3,5};//Does not handle leap years.
 
 	public static void main(String[] args) {
-		Classifier p = getPredictor(1, 100000);
+		ArrayList<FeatureResultPair> trainingData = getTrainingData("train.csv", "train_y.csv");
+		Classifier cl = getClassifier(cln);
 		makePredictions(p, "validate.csv", "validate_4NN_y.csv");
 	}
 	
+	private static Classifier getClassifier(CLASSIFIER_NAME cln) {
+		switch(cln){
+			case KNN:
+				return getKNNClassifier(trainingData, 4);
+				
+		return null;
+	}
+
 	public static void makePredictions(Classifier p, String fileNameIn, String fileNameOut) {
 		File inFile = new File(fileNameIn);
 		File outFile = new File(fileNameOut);
@@ -72,12 +85,12 @@ public class Main {
 //		return predictor.getPredictedFunction();
 //	}
 	
-	public static Classifier getPredictor(double tolerance, int maxIterations) {
+	public static ArrayList<FeatureResultPair> getTrainingData(String featureInputFile, String resultInputFile) {
 		ArrayList<FeatureResultPair> trainingData = new ArrayList<FeatureResultPair>();
 		try {
-			File file = new File("train.csv");
+			File file = new File(featureInputFile);
 			BufferedReader featureReader = new BufferedReader(new FileReader(file));
-			File resultFile = new File("train_y.csv");
+			File resultFile = new File(resultInputFile);
 			BufferedReader resultReader = new BufferedReader(new FileReader(resultFile));
 			String featureLine = featureReader.readLine();
 			String result = resultReader.readLine();
@@ -95,12 +108,24 @@ public class Main {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		KNN knn = new KNN();
-		knn.setTrainingSamples(trainingData);
-		knn.normalize();
-		knn.setK(4);
-		return knn;
+		return trainingData;
 	}
+	
+public static BoundaryForest getBoundaryForestClassifier(ArrayList<FeatureResultPair> trainingData, int k){
+	BoundaryForest bf = new BoundaryForest();
+	bf.train(trainingData);
+	bf.normalize();
+	bf.setNumTrees(k);
+	return bf;
+}
+
+public static KNN getKNNClassifier(ArrayList<FeatureResultPair> trainingData, int k) {
+	KNN knn = new KNN();
+	knn.setTrainingSamples(trainingData);
+	knn.normalize();
+	knn.setK(k);
+	return knn;
+}
 	
 	public static double[] getFeatureVec(String featureLine) {
 		String[] tokens = featureLine.split(",");
