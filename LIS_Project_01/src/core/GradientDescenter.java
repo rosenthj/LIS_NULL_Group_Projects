@@ -16,7 +16,7 @@ public class GradientDescenter {
 	
 	public GradientDescenter(List<FeatureResultPair> trainingData) {
 		for (FeatureResultPair trainingCase : trainingData) trainingCases.add(trainingCase);
-		predictedFunction = new Polynomial(trainingCases.get(0).x.length);
+		predictedFunction = new Polynomial(trainingCases.get(0).featureVec.length);
 	}
 	
 	public void addTrainingPoint(double[] x, double y) {
@@ -26,7 +26,7 @@ public class GradientDescenter {
 	public double getAverageTrainingError() {
 		double error = 0, caseError;
 		for (FeatureResultPair trainingPoint : trainingCases) {
-			caseError = trainingPoint.y - predictedFunction.evaluateAt(trainingPoint.x);
+			caseError = trainingPoint.result - predictedFunction.evaluateAt(trainingPoint.featureVec);
 			error += caseError * caseError;
 		}
 		if (trainingCases.size() > 0) error /= trainingCases.size();
@@ -36,10 +36,10 @@ public class GradientDescenter {
 	public double[] getGradient() {
 		double[] gradient = new double[predictedFunction.weights.length];
 		for (FeatureResultPair trainingPoint : trainingCases) {
-			double difference = trainingPoint.y - predictedFunction.evaluateAt(trainingPoint.x);
+			double difference = trainingPoint.result - predictedFunction.evaluateAt(trainingPoint.featureVec);
 			gradient[0] += difference;//constant offset.
-			for (int i = 0; i < trainingPoint.x.length; i++) {
-				gradient[i+1] += difference * trainingPoint.x[i];
+			for (int i = 0; i < trainingPoint.featureVec.length; i++) {
+				gradient[i+1] += difference * trainingPoint.featureVec[i];
 			}
 		}
 		for (int i = 0; i < gradient.length; i++) gradient[i] *= (2);

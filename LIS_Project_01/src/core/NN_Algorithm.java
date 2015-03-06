@@ -1,5 +1,10 @@
 package core;
 
+/**
+ * Super class for all nearest neighbor algorithms. 
+ * Nearest neighbor algorithms rely on some distance metric which is defined here.
+ */
+
 public abstract class NN_Algorithm implements Classifier, SupervisedLearningAlgorithm {
 	
 	public static double distance(double[] x1, double[] x2) {

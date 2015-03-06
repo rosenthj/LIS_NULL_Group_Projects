@@ -11,8 +11,8 @@ public class BoundaryTree extends NN_Algorithm implements Classifier {
 		final double[] x;
 		final double y;
 		public Node(FeatureResultPair values) {
-			x = values.x;
-			y = values.y;
+			x = values.featureVec;
+			y = values.result;
 		}
 		
 		public void addChildWithFeatures(FeatureResultPair values) {
@@ -52,8 +52,8 @@ public class BoundaryTree extends NN_Algorithm implements Classifier {
 			root = new Node(trainingSample);
 		}
 		else {
-			Node node = getNearestNode(root, distance(root.x, trainingSample.x), trainingSample.x);
-			if (node.y != trainingSample.y) node.addChildWithFeatures(trainingSample);
+			Node node = getNearestNode(root, distance(root.x, trainingSample.featureVec), trainingSample.featureVec);
+			if (node.y != trainingSample.result) node.addChildWithFeatures(trainingSample);
 		}
 	}
 

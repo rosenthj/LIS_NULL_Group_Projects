@@ -36,20 +36,20 @@ public class BoundaryForest implements Classifier, SupervisedLearningAlgorithm {
 	public void normalize() {
 		normalized = true;
 		ArrayList<FeatureResultPair> trainingData = new ArrayList<FeatureResultPair>();
-		normalisationMinimum = new double[trainingSamples.get(0).x.length];
+		normalisationMinimum = new double[trainingSamples.get(0).featureVec.length];
 		normalisationMaximum = new double[normalisationMinimum.length];
 		for (int j = 0; j < normalisationMinimum.length; j++) {
-			normalisationMinimum[j] = trainingSamples.get(0).x[j];
-			normalisationMaximum[j] = trainingSamples.get(0).x[j];
+			normalisationMinimum[j] = trainingSamples.get(0).featureVec[j];
+			normalisationMaximum[j] = trainingSamples.get(0).featureVec[j];
 		}
 		for (int i = 0; i < trainingSamples.size(); i++) {
 			for (int j = 0; j < normalisationMinimum.length; j++) {
-				if (normalisationMinimum[j] < trainingSamples.get(i).x[j]) normalisationMinimum[j] = trainingSamples.get(i).x[j];
-				if (normalisationMaximum[j] > trainingSamples.get(i).x[j]) normalisationMaximum[j] = trainingSamples.get(i).x[j];
+				if (normalisationMinimum[j] < trainingSamples.get(i).featureVec[j]) normalisationMinimum[j] = trainingSamples.get(i).featureVec[j];
+				if (normalisationMaximum[j] > trainingSamples.get(i).featureVec[j]) normalisationMaximum[j] = trainingSamples.get(i).featureVec[j];
 			}
 		}
 		for (int i = 0; i < trainingSamples.size(); i++) {
-			trainingData.add(new FeatureResultPair(normaliseFeatures(trainingSamples.get(i).x), normaliseResults(trainingSamples.get(i).y)));
+			trainingData.add(new FeatureResultPair(normaliseFeatures(trainingSamples.get(i).featureVec), normaliseResults(trainingSamples.get(i).result)));
 		}
 		trainingSamples = trainingData;
 	}
