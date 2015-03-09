@@ -24,8 +24,13 @@ import sklearn.cross_validation as skcv
 # Provides grid search functionality
 import sklearn.grid_search as skgs
 
-def get_features(h):
-    return [h, np.exp(h)]
+MonthsTable = [0,3,3,6,1,4,6,2,5,0,3,5]
+
+def get_weekday(y, m, d):
+    return np.mod(y-2000+m+d+((y-2000)/4) + 6, 7)
+
+def get_features(h, r):
+    return np.concatenate([[h, h*h, h*h*h, np.exp(h)], r])
 
 
 def read_data(inpath):
@@ -34,7 +39,7 @@ def read_data(inpath):
         reader = csv.reader(fin, delimiter=',')
         for row in reader:
             t = datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
-            X.append(get_features(t.hour))
+            X.append(get_features(t.hour, [float(x) for x in row[1:]]))
     return np.atleast_2d(X)
 
 
@@ -42,6 +47,7 @@ X = read_data('train.csv')
 Y = np.genfromtxt('train_y.csv', delimiter=',')
 print('Shape of X:', X.shape)
 print('Shape of Y:', Y.shape)
+print X[0]
 
 Xtrain, Xtest, Ytrain, Ytest = skcv.train_test_split(X, Y, train_size=0.75)
 print('Shape of Xtrain:', Xtrain.shape)
@@ -59,14 +65,14 @@ print('intercept =', regressor.intercept_)
 # plt.ylim([0, 1000])
 # plt.show()
 
-Hplot = range(25)
-Xplot = np.atleast_2d([get_features(x) for x in Hplot])
-Yplot = regressor.predict(Xplot)
-plt.plot(Xtrain[:, 0], Ytrain, 'bo')
-plt.plot(Hplot, Yplot, 'r', linewidth=3)
-plt.xlim([-0.5, 23.5])
-plt.ylim([0, 1000])
-plt.show()
+# Hplot = range(25)
+# Xplot = np.atleast_2d([get_features(x) for x in Hplot])
+# Yplot = regressor.predict(Xplot)
+# plt.plot(Xtrain[:, 0], Ytrain, 'bo')
+# plt.plot(Hplot, Yplot, 'r', linewidth=3)
+# plt.xlim([-0.5, 23.5])
+# plt.ylim([0, 1000])
+# plt.show()
 
 def logscore(gtruth, pred):
     pred = np.clip(pred, 0, np.inf)
@@ -82,7 +88,8 @@ scores = skcv.cross_val_score(regressor, X, Y, scoring=scorefun, cv=5)
 print('C-V score =', np.mean(scores), '+/-', np.std(scores))
 
 regressor_ridge = sklin.Ridge()
-param_grid = {'alpha': np.linspace(0, 100, 10)}
+regressor_ridge.max_iter = 100000000
+param_grid = {'alpha': np.linspace(0, 10000000, 200)}
 neg_scorefun = skmet.make_scorer(lambda x, y: -logscore(x, y))
 grid_search = skgs.GridSearchCV(regressor_ridge, param_grid, scoring=neg_scorefun, cv=5)
 grid_search.fit(Xtrain, Ytrain)
