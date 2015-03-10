@@ -7,6 +7,7 @@ Created on Mar 7, 2015
 if __name__ == '__main__':
     pass
 
+import sklearn.svm as svm
 # Provides Matlab-style matrix operations
 import numpy as np
 # Provides Matlab-style plotting
@@ -23,15 +24,35 @@ import sklearn.metrics as skmet
 import sklearn.cross_validation as skcv
 # Provides grid search functionality
 import sklearn.grid_search as skgs
+# Provides feature selection functionality
+import sklearn.feature_selection as skfs
 
 MonthsTable = [0,3,3,6,1,4,6,2,5,0,3,5]
 
 def get_weekday(y, m, d):
     return np.mod(y-2000+m+d+((y-2000)/4) + 6, 7)
 
-def get_features(h, r):
-    return np.concatenate([[h, h*h, h*h*h, np.exp(h)], r])
+def f_log(x):
+    return np.log2(np.abs(x)+0.01)
 
+def create_vector(a):
+    return [a, a*a, a*a*a, f_log(a), a*f_log(a), np.exp2(a), np.sin(a), a*np.sin(a)]
+
+def get_cat_vec(c, num_cat):
+    A = [0] * num_cat
+    A[c] = 1
+    return A
+
+def get_features(h, r, w):
+    return np.concatenate([[1, h, h*h, h*h*h],get_cat_vec(r, 7)])
+#     A = np.concatenate([[h, h*h, h*h*h], r])
+#     return A # np.concatenate([create_vector(a) for a in A[:]])
+
+def logscore(gtruth, pred):
+    pred = np.clip(pred, 0, np.inf)
+    logdif = np.log(1 + gtruth) - np.log(1 + pred)
+    return np.sqrt(np.mean(np.square(logdif)))
+ 
 
 def read_data(inpath):
     X = []
@@ -39,12 +60,22 @@ def read_data(inpath):
         reader = csv.reader(fin, delimiter=',')
         for row in reader:
             t = datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
-            X.append(get_features(t.hour, [float(x) for x in row[1:]]))
+#             X.append(get_features(t.hour, [float(x) for x in row[1:]]))
+            X.append(get_features(t.hour, t.weekday(), int(row[2])))
+
     return np.atleast_2d(X)
+
+def select_features(X, y):
+    svc = svm.SVR(kernel="linear")
+    rfecv = skfs.RFECV(estimator=svc, step=1,
+              scoring='accuracy')
+    rfecv.fit(X, y)
+#     print("Optimal number of features : %d" % rfecv.n_features_)
 
 
 X = read_data('train.csv')
 Y = np.genfromtxt('train_y.csv', delimiter=',')
+# select_features(X, Y)
 print('Shape of X:', X.shape)
 print('Shape of Y:', Y.shape)
 print X[0]
@@ -55,10 +86,10 @@ print('Shape of Ytrain:', Ytrain.shape)
 print('Shape of Xtest:', Xtest.shape)
 print('Shape of Ytest:', Ytest.shape)
 
-regressor = sklin.LinearRegression()
+regressor = svm.SVR()
 regressor.fit(Xtrain, Ytrain)
-print('coefficients =', regressor.coef_)
-print('intercept =', regressor.intercept_)
+# print('coefficients =', regressor.coef_)
+# print('intercept =', regressor.intercept_)
 
 # plt.plot(Xtrain[:, 0], Ytrain, 'bo')
 # plt.xlim([-0.5, 23.5])
@@ -74,24 +105,24 @@ print('intercept =', regressor.intercept_)
 # plt.ylim([0, 1000])
 # plt.show()
 
-def logscore(gtruth, pred):
-    pred = np.clip(pred, 0, np.inf)
-    logdif = np.log(1 + gtruth) - np.log(1 + pred)
-    return np.sqrt(np.mean(np.square(logdif)))
-
 
 Ypred = regressor.predict(Xtest)
-print('score =', logscore(Ytest, Ypred))
+print('score of svr=', logscore(Ytest, Ypred))
+
+# reg = svm.SVR()
+# reg.fit(X,Y)
+Xval = read_data('validate.csv')
+# regY = reg.predict(Xval)
+# np.savetxt('validate_SVR.csv', regY)
 
 scorefun = skmet.make_scorer(logscore)
-scores = skcv.cross_val_score(regressor, X, Y, scoring=scorefun, cv=5)
-print('C-V score =', np.mean(scores), '+/-', np.std(scores))
+# scores = skcv.cross_val_score(regressor, X, Y, scoring=scorefun, cv=5)
+# print('C-V score =', np.mean(scores), '+/-', np.std(scores))
 
-regressor_ridge = sklin.Ridge()
-regressor_ridge.max_iter = 100000000
-param_grid = {'alpha': np.linspace(0, 10000000, 200)}
+regressor_svr = svm.SVR()
+param_grid = {'epsilon': np.linspace(0, 1, 10)}
 neg_scorefun = skmet.make_scorer(lambda x, y: -logscore(x, y))
-grid_search = skgs.GridSearchCV(regressor_ridge, param_grid, scoring=neg_scorefun, cv=5)
+grid_search = skgs.GridSearchCV(regressor_svr, param_grid, scoring=neg_scorefun, cv=5)
 grid_search.fit(Xtrain, Ytrain)
 
 best = grid_search.best_estimator_
@@ -99,6 +130,5 @@ print(best)
 print('best score =', -grid_search.best_score_)
 
 #Print result to file
-Xval = read_data('validate.csv')
 Ypred = best.predict(Xval)
 np.savetxt('result_validate.txt', Ypred)
