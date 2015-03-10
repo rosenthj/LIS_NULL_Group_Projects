@@ -44,7 +44,7 @@ def get_cat_vec(c, num_cat):
     return A
 
 def get_features(h, r, w):
-    return np.concatenate([[1, h, h*h, h*h*h],get_cat_vec(r, 7)])
+    return np.concatenate([[1, h, h*h, h*h*h],[r/5]])
 #     A = np.concatenate([[h, h*h, h*h*h], r])
 #     return A # np.concatenate([create_vector(a) for a in A[:]])
 
