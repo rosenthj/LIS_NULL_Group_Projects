@@ -40,13 +40,13 @@ def f_log(x):
 def create_vector(a):
     return [a]#, f_log(a), np.exp2(a)]
 
-def get_cat_vec(c, num_cat):
+def get_cat_vec(c, num_cat, x=1):
     A = [0] * num_cat
-    A[c] = 1
+    A[c] = x
     return A
 
 def get_features(y, mon, h, m, r, w, wl, wr):
-    return np.concatenate([[y, mon, h, h*h, h*h*h, h*h*h*h, m],get_cat_vec(r, 7),wl, get_cat_vec(w, 4),wr])
+    return np.concatenate([[y, mon, h, h*h, h*h*h, h*h*h*h, m, r/5, r/4-r/6],get_cat_vec(r, 7) ,[wl, (r/5)*wl], get_cat_vec(w, 4),wr, [(r/5)*x for x in wr], get_cat_vec(w, 4, r/5)])
 #     A = np.concatenate([[h, m, r/5], wl, wr])
 #     A = np.concatenate([create_vector(a) for a in A[:]])
 #     A = np.concatenate([[1],A])
@@ -67,8 +67,7 @@ def read_data(inpath):
         reader = csv.reader(fin, delimiter=',')
         for row in reader:
             t = datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
-#             X.append(get_features(t.hour, [float(x) for x in row[1:]]))
-            X.append(get_features(t.year, t.month, t.hour, t.minute, t.weekday(), int(row[2]), [float(row[1])], [float(x) for x in row[3:]]))
+            X.append(get_features(t.year, t.month, t.hour*60+t.minute, t.minute, t.weekday(), int(row[2]), float(row[1]), [float(x) for x in row[3:]]))
 
     return np.atleast_2d(X)
 
@@ -98,7 +97,7 @@ Xval = read_data('validate.csv')
 # regressor = sken.GradientBoostingRegressor()
 # regressor = svm.SVR()
 regressor = sken.RandomForestRegressor()
-regressor.n_estimators = 64
+regressor.n_estimators = 16
 regressor.fit(X,Y)
 Ypred = regressor.predict(Xval)
 print('predicted result')
@@ -135,8 +134,8 @@ scorefun = skmet.make_scorer(logscore)
 
 # regressor_svr = svm.SVR()
 regressor_svr = sken.RandomForestRegressor()
-regressor_svr.n_estimators = 256
-param_grid = {'random_state': np.arange(2)}
+regressor_svr.n_estimators = 32
+param_grid = {'max_features': np.arange(3,32)}
 neg_scorefun = skmet.make_scorer(lambda x, y: -logscore(x, y))
 grid_search = skgs.GridSearchCV(regressor_svr, param_grid, scoring=neg_scorefun, cv=5)
 grid_search.fit(Xtrain, Ytrain)
