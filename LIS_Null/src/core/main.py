@@ -28,6 +28,7 @@ import sklearn.grid_search as skgs
 import sklearn.feature_selection as skfs
 # Provides access to ensemble based classification and regression.
 import sklearn.ensemble as sken
+import sklearn.tree as sktree
 
 MonthsTable = [0,3,3,6,1,4,6,2,5,0,3,5]
 
@@ -40,43 +41,50 @@ def f_log(x):
 def create_vector(a):
     return [a]#, f_log(a), np.exp2(a)]
 
+def complex_vec(a):
+    return [a]
+
+def create_complex_vec(vec):
+    return np.concatenate([complex_vec(x) for x in vec])
+#     A = np.concatenate([complex_vec(x) for x in vec])
+#     A = np.concatenate([[1],A])
+#     A = np.atleast_2d(A)
+#     A = np.dot(A.T, A)
+#     return np.concatenate(A)
+
 def get_cat_vec(c, num_cat, x=1):
     A = [0] * num_cat
     A[c] = x
     return A
 
-def get_features(y, mon, h, m, r, w, wl, wr):
-    return np.concatenate([[y, mon, h, h*h, h*h*h, h*h*h*h, m, r/5, r/4-r/6],get_cat_vec(r, 7) ,[wl, (r/5)*wl], get_cat_vec(w, 4),wr, [(r/5)*x for x in wr], get_cat_vec(w, 4, r/5)])
-#     A = np.concatenate([[h, m, r/5], wl, wr])
-#     A = np.concatenate([create_vector(a) for a in A[:]])
-#     A = np.concatenate([[1],A])
-#     A = np.atleast_2d(A)
-#     A = np.dot(A.T, A)
-#     A = np.concatenate(A)
-#     return np.concatenate([[h*h*h,h*h*h*h],A, get_cat_vec(r, 7), get_cat_vec(w, 4)])
+def get_features(geomVec, catVec):
+    return np.concatenate([create_complex_vec([int(x) for x in geomVec]), [int(x) for x in catVec]])
 
 def logscore(gtruth, pred):
     pred = np.clip(pred, 0, np.inf)
     logdif = np.log(1 + gtruth) - np.log(1 + pred)
     return np.sqrt(np.mean(np.square(logdif)))
- 
+
+def elementsnotequal(x, y):
+    if (x == y):
+        return 0
+    return 1
+
+def labelsnotequal(x, y):
+    return map(elementsnotequal,x, y)
+
+def multilabelscore(gtruth, pred):
+    return np.mean(map(labelsnotequal,gtruth, pred))
 
 def read_data(inpath):
     X = []
     with open(inpath, 'r') as fin:
         reader = csv.reader(fin, delimiter=',')
         for row in reader:
-            t = datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
-            X.append(get_features(t.year, t.month, t.hour*60+t.minute, t.minute, t.weekday(), int(row[2]), float(row[1]), [float(x) for x in row[3:]]))
+#             t = datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
+            X.append(get_features(row[0:9],row[9:]))
 
     return np.atleast_2d(X)
-
-def select_features(X, y):
-    svc = svm.SVR(kernel="linear")
-    rfecv = skfs.RFECV(estimator=svc, step=1,
-              scoring='accuracy')
-    rfecv.fit(X, y)
-#     print("Optimal number of features : %d" % rfecv.n_features_)
 
 
 X = read_data('train.csv')
@@ -93,15 +101,22 @@ print('Shape of Xtest:', Xtest.shape)
 print('Shape of Ytest:', Ytest.shape)
 
 Xval = read_data('validate.csv')
+# Xval2 = read_data('test.csv')
 
 # regressor = sken.GradientBoostingRegressor()
-# regressor = svm.SVR()
-regressor = sken.RandomForestRegressor()
-regressor.n_estimators = 16
+# regressor_svc = svm.SVC()
+regressor = sken.RandomForestClassifier()
+regressor.n_estimators = 256
+regressor.min_samples_leaf = 1
+regressor.min_samples_split = 2
+regressor.n_classes_ = [7,3]
 regressor.fit(X,Y)
 Ypred = regressor.predict(Xval)
-print('predicted result')
-np.savetxt('result_validate_quick.txt', Ypred)
+print('predicted result validate.csv')
+np.savetxt('result_validate_quick.txt', Ypred, delimiter=',', fmt='%i')
+# Ypred2 = regressor.predict(Xval2)
+# print('predicted result of test.csv')
+# np.savetxt('result_test_quick.txt', Ypred2)
 regressor.fit(Xtrain, Ytrain)
 # print('coefficients =', regressor.coef_)
 # print('intercept =', regressor.intercept_)
@@ -121,23 +136,24 @@ regressor.fit(Xtrain, Ytrain)
 # plt.show()
 
 Ypred = regressor.predict(Xtest)
-print('score of random forest=', logscore(Ytest, Ypred))
+print('score of random forest=', multilabelscore(Ytest, Ypred))
 
 # reg = svm.SVR()
 # reg.fit(X,Y)
 # regY = reg.predict(Xval)
 # np.savetxt('validate_SVR.csv', regY)
 
-scorefun = skmet.make_scorer(logscore)
+scorefun = skmet.make_scorer(multilabelscore)
 # scores = skcv.cross_val_score(regressor, X, Y, scoring=scorefun, cv=5)
 # print('C-V score =', np.mean(scores), '+/-', np.std(scores))
 
 # regressor_svr = svm.SVR()
-regressor_svr = sken.RandomForestRegressor()
-regressor_svr.n_estimators = 32
-param_grid = {'max_features': np.arange(3,32)}
-neg_scorefun = skmet.make_scorer(lambda x, y: -logscore(x, y))
-grid_search = skgs.GridSearchCV(regressor_svr, param_grid, scoring=neg_scorefun, cv=5)
+regressor_cv = sken.RandomForestClassifier()
+regressor_cv.n_estimators = 64
+regressor_cv.n_classes_ = [7,3]
+param_grid = {'min_samples_split': np.arange(2,10)}
+neg_scorefun = skmet.make_scorer(lambda x, y: -multilabelscore(x, y))
+grid_search = skgs.GridSearchCV(regressor_cv, param_grid, scoring=neg_scorefun, cv=5)
 grid_search.fit(Xtrain, Ytrain)
 
 best = grid_search.best_estimator_
