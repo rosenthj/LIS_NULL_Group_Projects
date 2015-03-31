@@ -16,6 +16,8 @@ import matplotlib.pylab as plt
 import csv
 # For parsing date/time strings
 import datetime
+# For parsing .h5 file format
+import h5py
 # Contains linear models, e.g., linear regression, ridge regression, LASSO, etc.
 import sklearn.linear_model as sklin
 # Allows us to create custom scoring functions
@@ -29,6 +31,8 @@ import sklearn.feature_selection as skfs
 # Provides access to ensemble based classification and regression.
 import sklearn.ensemble as sken
 import sklearn.tree as sktree
+import sklearn.neighbors as nn
+import sklearn.preprocessing as skprep
 
 MonthsTable = [0,3,3,6,1,4,6,2,5,0,3,5]
 
@@ -46,11 +50,6 @@ def complex_vec(a):
 
 def create_complex_vec(vec):
     return np.concatenate([complex_vec(x) for x in vec])
-#     A = np.concatenate([complex_vec(x) for x in vec])
-#     A = np.concatenate([[1],A])
-#     A = np.atleast_2d(A)
-#     A = np.dot(A.T, A)
-#     return np.concatenate(A)
 
 def get_cat_vec(c, num_cat, x=1):
     A = [0] * num_cat
@@ -76,20 +75,39 @@ def labelsnotequal(x, y):
 def multilabelscore(gtruth, pred):
     return np.mean(map(labelsnotequal,gtruth, pred))
 
+def singlelabelscore(gtruth, pred):
+    return np.mean(map(elementsnotequal,gtruth, pred))
+
 def read_data(inpath):
     X = []
     with open(inpath, 'r') as fin:
         reader = csv.reader(fin, delimiter=',')
         for row in reader:
-#             t = datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
             X.append(get_features(row[0:9],row[9:]))
 
     return np.atleast_2d(X)
 
+def read_h5data(inpath):
+    return h5py.File(inpath, "r")["data"][...]
 
-X = read_data('train.csv')
-Y = np.genfromtxt('train_y.csv', delimiter=',')
-# select_features(X, Y)
+def read_h5labels(inpath):
+    f = h5py.File(inpath, "r")
+    return np.squeeze(np.asarray(f["label"]))
+
+
+X = read_h5data('train.h5')
+Y = read_h5labels('train.h5')
+
+min_variance = 0.01
+min_max_scaler = skprep.MinMaxScaler()
+Xscaled = X
+# Xscaled = min_max_scaler.fit_transform(X)
+# selector = skfs.VarianceThreshold(threshold=(min_variance))
+selector = skfs.SelectKBest(skfs.chi2, 2000)
+selector.fit(Xscaled, Y)
+print Xscaled[0]
+X = selector.transform(X)
+
 print('Shape of X:', X.shape)
 print('Shape of Y:', Y.shape)
 print X[0]
@@ -100,16 +118,15 @@ print('Shape of Ytrain:', Ytrain.shape)
 print('Shape of Xtest:', Xtest.shape)
 print('Shape of Ytest:', Ytest.shape)
 
-Xval = read_data('validate.csv')
+Xval = read_h5data('validate.h5')
+Xval = selector.transform(Xval)
 # Xval2 = read_data('test.csv')
 
 # regressor = sken.GradientBoostingRegressor()
-# regressor_svc = svm.SVC()
+# regressor = svm.SVC()
+# regressor = nn.KNeighborsClassifier()
 regressor = sken.RandomForestClassifier()
-regressor.n_estimators = 256
-regressor.min_samples_leaf = 1
-regressor.min_samples_split = 2
-regressor.n_classes_ = [7,3]
+regressor.n_estimators = 16
 regressor.fit(X,Y)
 Ypred = regressor.predict(Xval)
 print('predicted result validate.csv')
@@ -136,23 +153,22 @@ regressor.fit(Xtrain, Ytrain)
 # plt.show()
 
 Ypred = regressor.predict(Xtest)
-print('score of random forest=', multilabelscore(Ytest, Ypred))
+print('score of random forest=', singlelabelscore(Ytest, Ypred))
 
 # reg = svm.SVR()
 # reg.fit(X,Y)
 # regY = reg.predict(Xval)
 # np.savetxt('validate_SVR.csv', regY)
 
-scorefun = skmet.make_scorer(multilabelscore)
+scorefun = skmet.make_scorer(singlelabelscore)
 # scores = skcv.cross_val_score(regressor, X, Y, scoring=scorefun, cv=5)
 # print('C-V score =', np.mean(scores), '+/-', np.std(scores))
 
 # regressor_svr = svm.SVR()
 regressor_cv = sken.RandomForestClassifier()
 regressor_cv.n_estimators = 64
-regressor_cv.n_classes_ = [7,3]
 param_grid = {'min_samples_split': np.arange(2,10)}
-neg_scorefun = skmet.make_scorer(lambda x, y: -multilabelscore(x, y))
+neg_scorefun = skmet.make_scorer(lambda x, y: -singlelabelscore(x, y))
 grid_search = skgs.GridSearchCV(regressor_cv, param_grid, scoring=neg_scorefun, cv=5)
 grid_search.fit(Xtrain, Ytrain)
 
