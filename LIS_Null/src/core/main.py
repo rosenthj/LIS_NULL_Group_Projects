@@ -33,6 +33,7 @@ import sklearn.ensemble as sken
 import sklearn.tree as sktree
 import sklearn.neighbors as nn
 import sklearn.preprocessing as skprep
+import sklearn.cluster as cluster
 
 MonthsTable = [0,3,3,6,1,4,6,2,5,0,3,5]
 
@@ -94,7 +95,6 @@ def read_h5labels(inpath):
     f = h5py.File(inpath, "r")
     return np.squeeze(np.asarray(f["label"]))
 
-
 X = read_h5data('train.h5')
 Y = read_h5labels('train.h5')
 
@@ -103,10 +103,10 @@ min_max_scaler = skprep.MinMaxScaler()
 Xscaled = X
 # Xscaled = min_max_scaler.fit_transform(X)
 # selector = skfs.VarianceThreshold(threshold=(min_variance))
-selector = skfs.SelectKBest(skfs.chi2, 2000)
-selector.fit(Xscaled, Y)
-print Xscaled[0]
-X = selector.transform(X)
+# selector = skfs.SelectKBest(skfs.chi2, 2000)
+# selector.fit(Xscaled, Y)
+# print Xscaled[0]
+# X = selector.transform(X)
 
 print('Shape of X:', X.shape)
 print('Shape of Y:', Y.shape)
@@ -119,18 +119,39 @@ print('Shape of Xtest:', Xtest.shape)
 print('Shape of Ytest:', Ytest.shape)
 
 Xval = read_h5data('validate.h5')
-Xval = selector.transform(Xval)
+Xtest = read_h5data('test.h5')
+# Xval = selector.transform(Xval)
 # Xval2 = read_data('test.csv')
 
 # regressor = sken.GradientBoostingRegressor()
 # regressor = svm.SVC()
 # regressor = nn.KNeighborsClassifier()
-regressor = sken.RandomForestClassifier()
-regressor.n_estimators = 16
-regressor.fit(X,Y)
-Ypred = regressor.predict(Xval)
+
+
+# regressor2b = sken.RandomForestClassifier()
+# regressor2b.n_estimators = 16
+# regressor = sken.weight_boosting.AdaBoostClassifier(base_estimator=regressor2b)
+# regressor.n_classes_= 1
+# regressor.fit(X,Y)
+Ypred = []
+Results = []
+for i in xrange(2048):
+    regressor = sken.RandomForestClassifier()
+    regressor.n_estimators = 16
+    Xsmall = np.transpose(np.atleast_2d(Xtrain[:,i]))
+    regressor.fit(Xsmall,Ytrain)
+    Ypred = regressor.predict(np.transpose(np.atleast_2d(Xtest[:,i])))
+    print('score of random forest with feature=', i,':', singlelabelscore(Ytest, Ypred))
+    Results.append(singlelabelscore(Ytest, Ypred))
+#     if singlelabelscore(Ytest, Ypred)<0.88:
+        
+
+np.savetxt('single_feature_result.txt', Results, delimiter=',')
+    
+# Ypred = regressor.predict(Xval)
 print('predicted result validate.csv')
 np.savetxt('result_validate_quick.txt', Ypred, delimiter=',', fmt='%i')
+np.savetxt('result_test_quick.txt', Ypred, delimiter=',', fmt='%i')
 # Ypred2 = regressor.predict(Xval2)
 # print('predicted result of test.csv')
 # np.savetxt('result_test_quick.txt', Ypred2)
@@ -160,7 +181,7 @@ print('score of random forest=', singlelabelscore(Ytest, Ypred))
 # regY = reg.predict(Xval)
 # np.savetxt('validate_SVR.csv', regY)
 
-scorefun = skmet.make_scorer(singlelabelscore)
+scorefun = skmet.scorer.make_scorer(singlelabelscore)
 # scores = skcv.cross_val_score(regressor, X, Y, scoring=scorefun, cv=5)
 # print('C-V score =', np.mean(scores), '+/-', np.std(scores))
 
@@ -168,7 +189,7 @@ scorefun = skmet.make_scorer(singlelabelscore)
 regressor_cv = sken.RandomForestClassifier()
 regressor_cv.n_estimators = 64
 param_grid = {'min_samples_split': np.arange(2,10)}
-neg_scorefun = skmet.make_scorer(lambda x, y: -singlelabelscore(x, y))
+neg_scorefun = skmet.scorer.make_scorer(lambda x, y: -singlelabelscore(x, y))
 grid_search = skgs.GridSearchCV(regressor_cv, param_grid, scoring=neg_scorefun, cv=5)
 grid_search.fit(Xtrain, Ytrain)
 
