@@ -138,51 +138,8 @@ regressor.fit(X,Y)
 Ypred = regressor.predict(Xval)
 print('predicted result validate.csv')
 np.savetxt('result_validate_quick.txt', Ypred, delimiter=',', fmt='%i')
-# Ypred2 = regressor.predict(Xval2)
-# print('predicted result of test.csv')
-# np.savetxt('result_test_quick.txt', Ypred2)
 regressor.fit(Xtrain, Ytrain)
-# print('coefficients =', regressor.coef_)
-# print('intercept =', regressor.intercept_)
-
-# plt.plot(Xtrain[:, 0], Ytrain, 'bo')
-# plt.xlim([-0.5, 23.5])
-# plt.ylim([0, 1000])
-# plt.show()
-
-# Hplot = range(25)
-# Xplot = np.atleast_2d([get_features(x) for x in Hplot])
-# Yplot = regressor.predict(Xplot)
-# plt.plot(Xtrain[:, 0], Ytrain, 'bo')
-# plt.plot(Hplot, Yplot, 'r', linewidth=3)
-# plt.xlim([-0.5, 23.5])
-# plt.ylim([0, 1000])
-# plt.show()
-
 Ypred = regressor.predict(Xtest)
 print('score of random forest=', singlelabelscore(Ytest, Ypred))
 
-# reg = svm.SVR()
-# reg.fit(X,Y)
-# regY = reg.predict(Xval)
-# np.savetxt('validate_SVR.csv', regY)
-
 scorefun = skmet.make_scorer(singlelabelscore)
-# scores = skcv.cross_val_score(regressor, X, Y, scoring=scorefun, cv=5)
-# print('C-V score =', np.mean(scores), '+/-', np.std(scores))
-
-# regressor_svr = svm.SVR()
-regressor_cv = sken.RandomForestClassifier()
-regressor_cv.n_estimators = 64
-param_grid = {'min_samples_split': np.arange(2,10)}
-neg_scorefun = skmet.make_scorer(lambda x, y: -singlelabelscore(x, y))
-grid_search = skgs.GridSearchCV(regressor_cv, param_grid, scoring=neg_scorefun, cv=5)
-grid_search.fit(Xtrain, Ytrain)
-
-best = grid_search.best_estimator_
-print(best)
-print('best score =', -grid_search.best_score_)
-
-#Print result to file
-Ypred = best.predict(Xval)
-np.savetxt('result_validate.txt', Ypred)
