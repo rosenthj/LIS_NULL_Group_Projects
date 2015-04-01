@@ -33,6 +33,7 @@ import sklearn.ensemble as sken
 import sklearn.tree as sktree
 import sklearn.neighbors as nn
 import sklearn.preprocessing as skprep
+import sklearn.neural_network as skneural
 
 MonthsTable = [0,3,3,6,1,4,6,2,5,0,3,5]
 
@@ -94,16 +95,19 @@ def read_h5labels(inpath):
     f = h5py.File(inpath, "r")
     return np.squeeze(np.asarray(f["label"]))
 
-
+print('reading data')
 X = read_h5data('train.h5')
 Y = read_h5labels('train.h5')
-
-min_variance = 0.01
+print('scaling data')
+min_variance = 500
 min_max_scaler = skprep.MinMaxScaler()
 Xscaled = X
 # Xscaled = min_max_scaler.fit_transform(X)
-# selector = skfs.VarianceThreshold(threshold=(min_variance))
-selector = skfs.SelectKBest(skfs.chi2, 2000)
+print('selecting features')
+selector = skfs.VarianceThreshold(threshold=(min_variance))
+# selector = skfs.SelectPercentile(score_func=skfs.f_classif, percentile=20)
+# selector = skfs.SelectKBest(skfs.f_classif, 600)
+# selector = sken.RandomForestClassifier(n_estimators=8)
 selector.fit(Xscaled, Y)
 print Xscaled[0]
 X = selector.transform(X)
@@ -124,9 +128,11 @@ Xval = selector.transform(Xval)
 
 # regressor = sken.GradientBoostingRegressor()
 # regressor = svm.SVC()
+# regressor = svm.LinearSVC()
 # regressor = nn.KNeighborsClassifier()
-regressor = sken.RandomForestClassifier()
-regressor.n_estimators = 16
+# regressor = skneural.BernoulliRBM()
+# regressor = sken.ExtraTreesClassifier(n_estimators=16)
+regressor = sken.RandomForestClassifier(n_estimators=16)
 regressor.fit(X,Y)
 Ypred = regressor.predict(Xval)
 print('predicted result validate.csv')
