@@ -15,24 +15,25 @@ public class Main {
 	static final int DIMENSION_TIME_OF_DAY = 4;
 	static final int DIMENSIONS = 1;
 	static enum CLASSIFIER_NAME {
-		BOUNDARYFORCED, KNN
+		BOUNDARYFOREST, KNN
 	};
-	CLASSIFIER_NAME cln = CLASSIFIER_NAME.KNN;
+	static CLASSIFIER_NAME cln = CLASSIFIER_NAME.KNN;
 	
 	int[] monthsTable = {0,3,3,6,1,4,6,2,5,0,3,5};//Does not handle leap years.
 
 	public static void main(String[] args) {
 		ArrayList<FeatureResultPair> trainingData = getTrainingData("train.csv", "train_y.csv");
-		Classifier cl = getClassifier(cln);
-		makePredictions(p, "validate.csv", "validate_4NN_y.csv");
+		
+		SupervisedLearningAlgorithm cl = getSupervisedLearningAlgorithm(cln);
+		cl.train(trainingData);
+		makePredictions(cl, "validate.csv", "validate_4NN_y.csv");
 	}
 	
-	private static Classifier getClassifier(CLASSIFIER_NAME cln) {
+	private static SupervisedLearningAlgorithm getSupervisedLearningAlgorithm(CLASSIFIER_NAME cln) {
 		switch(cln){
-			case KNN:
-				return getKNNClassifier(trainingData, 4);
-				
-		return null;
+			case KNN: return getKNNClassifier(4);
+			default: return getBoundaryForestClassifier(16);
+		}
 	}
 
 	public static void makePredictions(Classifier p, String fileNameIn, String fileNameOut) {
@@ -111,18 +112,15 @@ public class Main {
 		return trainingData;
 	}
 	
-public static BoundaryForest getBoundaryForestClassifier(ArrayList<FeatureResultPair> trainingData, int k){
+public static BoundaryForest getBoundaryForestClassifier(int k){
 	BoundaryForest bf = new BoundaryForest();
-	bf.train(trainingData);
-	bf.normalize();
 	bf.setNumTrees(k);
 	return bf;
 }
 
-public static KNN getKNNClassifier(ArrayList<FeatureResultPair> trainingData, int k) {
+public static KNN getKNNClassifier(int k) {
 	KNN knn = new KNN();
-	knn.setTrainingSamples(trainingData);
-	knn.normalize();
+//	knn.normalize();
 	knn.setK(k);
 	return knn;
 }

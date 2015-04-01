@@ -4,7 +4,7 @@ import java.util.List;
 
 
 
-public class GradientDescenter {
+public class GradientDescenter implements SupervisedLearningAlgorithm {
 	
 	private ArrayList<FeatureResultPair> trainingCases = new ArrayList<FeatureResultPair>();
 	private Polynomial predictedFunction;
@@ -17,10 +17,6 @@ public class GradientDescenter {
 	public GradientDescenter(List<FeatureResultPair> trainingData) {
 		for (FeatureResultPair trainingCase : trainingData) trainingCases.add(trainingCase);
 		predictedFunction = new Polynomial(trainingCases.get(0).featureVec.length);
-	}
-	
-	public void addTrainingPoint(double[] x, double y) {
-		trainingCases.add(new FeatureResultPair(x, y));
 	}
 	
 	public double getAverageTrainingError() {
@@ -79,5 +75,25 @@ public class GradientDescenter {
 	
 	public Polynomial getPredictedFunction() {
 		return predictedFunction;
+	}
+
+	@Override
+	public int classify(double[] features) {
+		return predictedFunction.classify(features);
+	}
+
+	@Override
+	public double regClassify(double[] features) {
+		return predictedFunction.regClassify(features);
+	}
+
+	@Override
+	public void addTrainingSample(FeatureResultPair trainingSample) {
+		trainingCases.add(trainingSample);
+	}
+
+	@Override
+	public void train(ArrayList<FeatureResultPair> trainingSamples) {
+		
 	}
 }

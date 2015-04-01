@@ -34,6 +34,7 @@ import sklearn.tree as sktree
 import sklearn.neighbors as nn
 import sklearn.preprocessing as skprep
 import sklearn.neural_network as skneural
+import sklearn.cluster as cluster
 
 MonthsTable = [0,3,3,6,1,4,6,2,5,0,3,5]
 

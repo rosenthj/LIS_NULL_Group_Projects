@@ -5,7 +5,7 @@ package core;
  * Nearest neighbor algorithms rely on some distance metric which is defined here.
  */
 
-public abstract class NN_Algorithm implements Classifier, SupervisedLearningAlgorithm {
+public abstract class NN_Algorithm implements SupervisedLearningAlgorithm {
 	
 	public static double distance(double[] x1, double[] x2) {
 		double res = 0, dif;

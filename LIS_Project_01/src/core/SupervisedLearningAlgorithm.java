@@ -4,7 +4,7 @@ import java.util.ArrayList;
 /**
  * Interface for Supervised learning algorithms.
  */
-public interface SupervisedLearningAlgorithm {
+public interface SupervisedLearningAlgorithm extends Classifier {
 	
 	/**
 	 * Add a single training sample to the algorithm.

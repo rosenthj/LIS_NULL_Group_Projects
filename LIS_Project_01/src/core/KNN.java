@@ -122,8 +122,8 @@ public class KNN extends NN_Algorithm {
 
 	@Override
 	public void train(ArrayList<FeatureResultPair> trainingSamples) {
-		// TODO Auto-generated method stub
-		
+		this.trainingSamples = trainingSamples;
+		normalize();
 	}
 	
 }
