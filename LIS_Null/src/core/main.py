@@ -3,6 +3,7 @@ Created on Mar 7, 2015
 
 @author: jonathan
 '''
+from sklearn.ensemble.gradient_boosting import GradientBoostingRegressor
 
 if __name__ == '__main__':
     pass
@@ -98,59 +99,64 @@ def read_h5labels(inpath):
     f = h5py.File(inpath, "r")
     return np.squeeze(np.asarray(f["label"]))
 
-print('reading data')
+print('loading training data')
 X = read_h5data('train.h5')
 Y = read_h5labels('train.h5')
-print('scaling data')
-min_variance = 0
-min_max_scaler = skprep.MinMaxScaler()
-# min_max_scaler.fit(X)
-Xscaled = X
-# Xscaled = min_max_scaler.transform(X)
-print('selecting features')
-selector = skfs.VarianceThreshold(threshold=(min_variance))
-# selector = skfs.SelectPercentile(score_func=skfs.f_classif, percentile=20)
-# selector = skfs.SelectKBest(skfs.f_classif, 1000)
-# selector = sken.RandomForestClassifier(n_estimators=8)
-selector.fit(Xscaled, Y)
-print 'Xscaled[0] : ', Xscaled[0]
-X = selector.transform(Xscaled)
 
 print('Shape of X:', X.shape)
 print('Shape of Y:', Y.shape)
-print X[0]
 
 Xtrain, Xtest, Ytrain, Ytest = skcv.train_test_split(X, Y, train_size=0.5)
-print('Shape of Xtrain:', Xtrain.shape)
-print('Shape of Ytrain:', Ytrain.shape)
-print('Shape of Xtest:', Xtest.shape)
-print('Shape of Ytest:', Ytest.shape)
+print 'Shape of Xtrain:', Xtrain.shape
+print 'Shape of Ytrain:', Ytrain.shape
+print 'Shape of Xtest:', Xtest.shape
+print 'Shape of Ytest:', Ytest.shape
 
-Xval = read_h5data('validate.h5')
-# Xval = min_max_scaler.transform(Xval)
-Xval = selector.transform(Xval)
-# Xval2 = read_data('test.csv)
+print 'loading validation data'
+valX = read_h5data('validate.h5')
+print 'Shape of valX:', valX.shape
 
-# regressor = sken.GradientBoostingRegressor()
-# regressor = svm.SVC()
-# regressor = svm.LinearSVC()
-# regressor = nn.KNeighborsClassifier()
+# print 'loading test data'
+# testX = read_h5data('test.h5')
+# print 'Shape of testX:', testX.shape
+
+# PREPROCESSING
+# SCALING
+min_max_scaler = skprep.MinMaxScaler()
+# FEATURE SELECTION
+varianceThresholdSelector = skfs.VarianceThreshold(threshold=(0))
+percentileSelector = skfs.SelectPercentile(score_func=skfs.f_classif, percentile=20)
+kBestSelector = skfs.SelectKBest(skfs.f_classif, 1000)
+# FEATURE EXTRACTION
 rbm = skneural.BernoulliRBM(random_state=0, learning_rate = 0.01, n_components = 100, n_iter = 5, verbose=True)
-# regressor = sken.ExtraTreesClassifier(n_estimators=16)
 nmf = skdec.NMF(n_components=150)
 pca = skdec.PCA(n_components=150)
-randomForest = sken.RandomForestClassifier(n_estimators=32)
+
+# REGRESSORS
+GradientBoostingRegressor = sken.GradientBoostingRegressor()
+supportVectorRegressor = svm.SVR()
+
+# CLASSIFIERS
+supportVectorClassifier = svm.LinearSVC()
+nearestNeighborClassifier = nn.KNeighborsClassifier()
+extraTreesClassifier = sken.ExtraTreesClassifier(n_estimators=16)
+randomForestClassifier = sken.RandomForestClassifier(n_estimators=32)
 logisticClassifier = sklin.LogisticRegression(C=10)
 
-classifier = skpipe.Pipeline(steps=[('nmf', nmf), ('logistic', logisticClassifier)])
+# PIPE DEFINITION
+classifier = skpipe.Pipeline(steps=[('pca', pca), ('logistic', logisticClassifier)])
+print 'Successfully prepared classifier pipeline!'
+
+print 'fitting classifier pipeline on training data subset for accuracy estimate'
+classifier.fit(Xtrain, Ytrain)
+print 'classifier pipe is predicting result of data'
+Ypred = classifier.predict(Xtest)
+print('score of classifier=', singlelabelscore(Ytest, Ypred))
+
+print 'fitting classifier pipeline on training data'
 classifier.fit(X, Y)
-Ypred = classifier.predict(Xval)
-# # rbm.fit(X, Y)
-# # Ypred = rbm.transform(X)
+print 'classifier pipe is predicting result of data'
+Ypred = classifier.predict(valX)
 print('Ypred shape', Ypred.shape)
 print('predicted result validate.csv')
 np.savetxt('result_validate_quick.txt', Ypred, delimiter=',', fmt='%i')
-classifier.fit(Xtrain, Ytrain)
-print 'fit classifier pipe on training data'
-Ypred = classifier.predict(Xtest)
-print('score of classifier=', singlelabelscore(Ytest, Ypred))
