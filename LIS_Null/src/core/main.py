@@ -35,6 +35,8 @@ import sklearn.neighbors as nn
 import sklearn.preprocessing as skprep
 import sklearn.neural_network as skneural
 import sklearn.cluster as cluster
+import sklearn.pipeline as skpipe
+import sklearn.decomposition as skdec
 
 MonthsTable = [0,3,3,6,1,4,6,2,5,0,3,5]
 
@@ -100,46 +102,55 @@ print('reading data')
 X = read_h5data('train.h5')
 Y = read_h5labels('train.h5')
 print('scaling data')
-min_variance = 500
+min_variance = 0
 min_max_scaler = skprep.MinMaxScaler()
+# min_max_scaler.fit(X)
 Xscaled = X
-# Xscaled = min_max_scaler.fit_transform(X)
+# Xscaled = min_max_scaler.transform(X)
 print('selecting features')
 selector = skfs.VarianceThreshold(threshold=(min_variance))
 # selector = skfs.SelectPercentile(score_func=skfs.f_classif, percentile=20)
-# selector = skfs.SelectKBest(skfs.f_classif, 600)
+# selector = skfs.SelectKBest(skfs.f_classif, 1000)
 # selector = sken.RandomForestClassifier(n_estimators=8)
 selector.fit(Xscaled, Y)
-print Xscaled[0]
-X = selector.transform(X)
+print 'Xscaled[0] : ', Xscaled[0]
+X = selector.transform(Xscaled)
 
 print('Shape of X:', X.shape)
 print('Shape of Y:', Y.shape)
 print X[0]
 
-Xtrain, Xtest, Ytrain, Ytest = skcv.train_test_split(X, Y, train_size=0.75)
+Xtrain, Xtest, Ytrain, Ytest = skcv.train_test_split(X, Y, train_size=0.5)
 print('Shape of Xtrain:', Xtrain.shape)
 print('Shape of Ytrain:', Ytrain.shape)
 print('Shape of Xtest:', Xtest.shape)
 print('Shape of Ytest:', Ytest.shape)
 
 Xval = read_h5data('validate.h5')
+# Xval = min_max_scaler.transform(Xval)
 Xval = selector.transform(Xval)
-# Xval2 = read_data('test.csv')
+# Xval2 = read_data('test.csv)
 
 # regressor = sken.GradientBoostingRegressor()
 # regressor = svm.SVC()
 # regressor = svm.LinearSVC()
 # regressor = nn.KNeighborsClassifier()
-# regressor = skneural.BernoulliRBM()
+rbm = skneural.BernoulliRBM(random_state=0, learning_rate = 0.01, n_components = 100, n_iter = 5, verbose=True)
 # regressor = sken.ExtraTreesClassifier(n_estimators=16)
-regressor = sken.RandomForestClassifier(n_estimators=16)
-regressor.fit(X,Y)
-Ypred = regressor.predict(Xval)
+nmf = skdec.NMF(n_components=150)
+pca = skdec.PCA(n_components=150)
+randomForest = sken.RandomForestClassifier(n_estimators=32)
+logisticClassifier = sklin.LogisticRegression(C=10)
+
+classifier = skpipe.Pipeline(steps=[('nmf', nmf), ('logistic', logisticClassifier)])
+classifier.fit(X, Y)
+Ypred = classifier.predict(Xval)
+# # rbm.fit(X, Y)
+# # Ypred = rbm.transform(X)
+print('Ypred shape', Ypred.shape)
 print('predicted result validate.csv')
 np.savetxt('result_validate_quick.txt', Ypred, delimiter=',', fmt='%i')
-regressor.fit(Xtrain, Ytrain)
-Ypred = regressor.predict(Xtest)
-print('score of random forest=', singlelabelscore(Ytest, Ypred))
-
-scorefun = skmet.make_scorer(singlelabelscore)
+classifier.fit(Xtrain, Ytrain)
+print 'fit classifier pipe on training data'
+Ypred = classifier.predict(Xtest)
+print('score of classifier=', singlelabelscore(Ytest, Ypred))
