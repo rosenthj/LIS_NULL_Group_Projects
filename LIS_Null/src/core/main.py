@@ -4,6 +4,7 @@ Created on Mar 7, 2015
 @author: jonathan
 '''
 from sklearn.ensemble.gradient_boosting import GradientBoostingRegressor
+from sklearn.grid_search import GridSearchCV
 
 if __name__ == '__main__':
     pass
@@ -130,7 +131,7 @@ kBestSelector = skfs.SelectKBest(skfs.f_classif, 1000)
 # FEATURE EXTRACTION
 rbm = skneural.BernoulliRBM(random_state=0, learning_rate = 0.01, n_components = 100, n_iter = 5, verbose=True)
 nmf = skdec.NMF(n_components=150)
-pca = skdec.PCA(n_components=150)
+pca = skdec.PCA(n_components=450)
 
 # REGRESSORS
 GradientBoostingRegressor = sken.GradientBoostingRegressor()
@@ -141,17 +142,22 @@ supportVectorClassifier = svm.LinearSVC()
 nearestNeighborClassifier = nn.KNeighborsClassifier()
 extraTreesClassifier = sken.ExtraTreesClassifier(n_estimators=16)
 randomForestClassifier = sken.RandomForestClassifier(n_estimators=32)
-logisticClassifier = sklin.LogisticRegression(C=10)
+logisticClassifier = sklin.LogisticRegression(C=80)
 
 # PIPE DEFINITION
-classifier = skpipe.Pipeline(steps=[('pca', pca), ('logistic', logisticClassifier)])
+classifier = skpipe.Pipeline(steps=[('pca', pca), ('estimator', logisticClassifier)])
 print 'Successfully prepared classifier pipeline!'
 
-print 'fitting classifier pipeline on training data subset for accuracy estimate'
-classifier.fit(Xtrain, Ytrain)
-print 'classifier pipe is predicting result of data'
-Ypred = classifier.predict(Xtest)
-print('score of classifier=', singlelabelscore(Ytest, Ypred))
+# GRID DEFINITION
+# classifierSearcher = GridSearchCV(classifier, dict(estimator__C=[80,100,120]), verbose=2)
+#  
+# print 'fitting classifier pipeline grid on training data subset for accuracy estimate'
+# classifierSearcher.fit(Xtrain, Ytrain)
+# print 'best estimator:', classifierSearcher.best_estimator_
+# classifier = classifierSearcher.best_estimator_
+# print 'classifier pipe is predicting result of data'
+# Ypred = classifier.predict(Xtest)
+# print('score of classifier=', singlelabelscore(Ytest, Ypred))
 
 print 'fitting classifier pipeline on training data'
 classifier.fit(X, Y)
