@@ -5,6 +5,7 @@ Created on Mar 7, 2015
 '''
 from sklearn.ensemble.gradient_boosting import GradientBoostingRegressor
 from sklearn.grid_search import GridSearchCV
+from sklearn.preprocessing.data import MinMaxScaler
 
 if __name__ == '__main__':
     pass
@@ -39,6 +40,7 @@ import sklearn.neural_network as skneural
 import sklearn.cluster as cluster
 import sklearn.pipeline as skpipe
 import sklearn.decomposition as skdec
+import sklearn.naive_bayes as skbayes
 
 MonthsTable = [0,3,3,6,1,4,6,2,5,0,3,5]
 
@@ -123,34 +125,43 @@ print 'Shape of valX:', valX.shape
 
 # PREPROCESSING
 # SCALING
-min_max_scaler = skprep.MinMaxScaler()
+minMaxScaler = skprep.MinMaxScaler()
 # FEATURE SELECTION
 varianceThresholdSelector = skfs.VarianceThreshold(threshold=(0))
 percentileSelector = skfs.SelectPercentile(score_func=skfs.f_classif, percentile=20)
 kBestSelector = skfs.SelectKBest(skfs.f_classif, 1000)
 # FEATURE EXTRACTION
 rbm = skneural.BernoulliRBM(random_state=0, learning_rate = 0.01, n_components = 100, n_iter = 5, verbose=True)
+rbmPipe = skpipe.Pipeline(steps=[('scaling', minMaxScaler), ('rbm', rbm)])
 nmf = skdec.NMF(n_components=150)
 pca = skdec.PCA(n_components=450)
+kernelPCA = skdec.KernelPCA(n_components=25)# Costs huge amounts of ram
+randomizedPCA= skdec.RandomizedPCA()
 
 # REGRESSORS
 GradientBoostingRegressor = sken.GradientBoostingRegressor()
 supportVectorRegressor = svm.SVR()
 
 # CLASSIFIERS
-supportVectorClassifier = svm.LinearSVC()
+supportVectorClassifier = svm.SVC()
+linearSupportVectorClassifier = svm.LinearSVC()
 nearestNeighborClassifier = nn.KNeighborsClassifier()
 extraTreesClassifier = sken.ExtraTreesClassifier(n_estimators=16)
 randomForestClassifier = sken.RandomForestClassifier(n_estimators=32)
 logisticClassifier = sklin.LogisticRegression(C=80)
+ridgeClassifier = sklin.RidgeClassifier(alpha=0.1, solver='svd')
+bayes = skbayes.MultinomialNB()
+
+# FEATURE UNION
+featureUnion = skpipe.FeatureUnion(transformer_list=[('pca', pca)])
 
 # PIPE DEFINITION
-classifier = skpipe.Pipeline(steps=[('pca', pca), ('estimator', logisticClassifier)])
+classifier = skpipe.Pipeline(steps=[('randomizedPCA', randomizedPCA),('estimator', randomForestClassifier)])
 print 'Successfully prepared classifier pipeline!'
 
 # GRID DEFINITION
-# classifierSearcher = GridSearchCV(classifier, dict(estimator__C=[80,100,120]), verbose=2)
-#  
+# classifierSearcher = GridSearchCV(classifier, dict(pca__n_components=[100, 150, 200], estimator__alpha=[1,2,5]), verbose=2)
+#    
 # print 'fitting classifier pipeline grid on training data subset for accuracy estimate'
 # classifierSearcher.fit(Xtrain, Ytrain)
 # print 'best estimator:', classifierSearcher.best_estimator_
